@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'babel'
+    environment: 'production'
+
+scrape_configs:
+  - job_name: 'babel-manager'
+    static_configs:
+      - targets: ['babel-manager:9092']
+        labels:
+          service: 'babel-manager'
+
+  - job_name: 'solana-rpc'
+    static_configs:
+      - targets: ['solana-rpc:9091']
+        labels:
+          service: 'solana-rpc'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+

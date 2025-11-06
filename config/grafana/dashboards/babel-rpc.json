@@ -1,0 +1,147 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "babel-rpc",
+    "title": "Babel RPC Dashboard",
+    "tags": ["babel", "solana", "rpc"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Node Health Status",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "babel_node_healthy",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            },
+            "mappings": [
+              {"type": "value", "value": "0", "text": "Unhealthy"},
+              {"type": "value", "value": "1", "text": "Healthy"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Current Slot",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "babel_node_slot",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Transactions Per Second",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "babel_node_tps",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "tps"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "RPC Requests (Rate)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(babel_rpc_requests_total[1m])",
+            "legendFormat": "{{method}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "RPC Latency (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(babel_rpc_request_duration_microseconds_bucket[5m]))",
+            "legendFormat": "{{method}} p95",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "µs", "label": "Latency"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Slot Progression",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "babel_node_slot",
+            "legendFormat": "Current Slot",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Slot"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "WebSocket Messages",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(babel_ws_messages_total[1m])",
+            "legendFormat": "Messages/sec",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "msgps", "label": "Messages/sec"}
+        ]
+      }
+    ]
+  }
+}
+

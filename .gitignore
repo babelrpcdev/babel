@@ -1,0 +1,33 @@
+.env
+*.log
+*.swp
+*~
+
+# Elixir/Erlang
+/_build
+/deps
+/cover
+/doc
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
+
+# Docker volumes
+volumes/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
