@@ -6,6 +6,7 @@ Production-grade private RPC infrastructure for Solana mainnet, optimized for pu
 
 - **Solana RPC Node**: Optimized mainnet validator with private RPC access
 - **Babel Manager**: Elixir/OTP application for monitoring and management
+- **gRPC Stream Service**: Low-latency slot and transaction feeds inspired by Yellowstone gRPC
 - **Metrics Stack**: Prometheus + Grafana for real-time monitoring
 - **Logging Stack**: Loki + Promtail for centralized log aggregation
 
@@ -34,6 +35,7 @@ docker-compose logs -f babel-manager
 - **RPC Endpoint**: `http://localhost:8899`
 - **WebSocket**: `ws://localhost:8900`
 - **Babel API**: `http://localhost:4000`
+- **gRPC Stream**: `grpc://localhost:50051`
 - **Grafana**: `http://localhost:3000` (default: admin/admin)
 - **Prometheus**: `http://localhost:9090`
 
@@ -57,6 +59,31 @@ curl -X POST http://localhost:4000/rpc \
 curl http://localhost:4000/pump/tokens/{WALLET_ADDRESS} \
   -H "X-API-Key: your_api_key"
 ```
+
+## gRPC Streaming
+
+The Babel Stream service follows a lightweight proto contract (`babel/proto/babel_stream.proto`) and exposes two real-time feeds:
+
+- `SubscribeSlots` – continuous slot, TPS, and block-time updates
+- `SubscribeTransactions` – recent signatures for any address or program (ideal for pump.fun tracking)
+
+Example slot subscription using [`grpcurl`](https://github.com/fullstorydev/grpcurl):
+
+```bash
+grpcurl -plaintext \
+  -d '{"startingSlot": 0}' \
+  localhost:50051 babel.stream.BabelStream/SubscribeSlots
+```
+
+Watch pump.fun program signatures with throttled polling (defaults shown in `.env`):
+
+```bash
+grpcurl -plaintext \
+  -d '{"address":"6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P","limit":20}' \
+  localhost:50051 babel.stream.BabelStream/SubscribeTransactions
+```
+
+> After pulling the repository, run `mix deps.get` inside `babel/` to install the new gRPC dependencies.
 
 ## Performance Tuning
 

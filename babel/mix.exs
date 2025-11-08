@@ -28,7 +28,8 @@ defmodule Babel.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:prometheus_ex, "~> 3.1"},
-      {:prometheus_plugs, "~> 1.1"}
+      {:prometheus_plugs, "~> 1.1"},
+      {:grpc, "~> 0.5"}
     ]
   end
 end

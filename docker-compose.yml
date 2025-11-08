@@ -49,6 +49,7 @@ services:
     ports:
       - "${MANAGER_PORT:-4000}:4000"
       - "${MANAGER_METRICS_PORT:-9092}:9092"
+      - "${GRPC_PORT:-50051}:50051"
     volumes:
       - ./config/babel:/etc/babel:ro
       - babel-data:/var/lib/babel
@@ -57,6 +58,8 @@ services:
       - WS_ENDPOINT=ws://solana-rpc:8900
       - ERLANG_COOKIE=${ERLANG_COOKIE:-babel_secret_cookie_change_me}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - GRPC_PORT=${GRPC_PORT:-50051}
+      - GRPC_TX_POLL_MS=${GRPC_TX_POLL_MS:-750}
     networks:
       - babel-net
     depends_on:

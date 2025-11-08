@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package babel.stream;
+
+message SlotRequest {
+  uint64 starting_slot = 1;
+}
+
+message SlotUpdate {
+  uint64 slot = 1;
+  double tps = 2;
+  double block_time = 3;
+  uint64 timestamp = 4;
+}
+
+message TransactionRequest {
+  string address = 1;
+  string commitment = 2;
+  uint32 limit = 3;
+}
+
+message TransactionUpdate {
+  string signature = 1;
+  string address = 2;
+  uint64 slot = 3;
+  string error = 4;
+  uint64 block_time = 5;
+}
+
+service BabelStream {
+  rpc SubscribeSlots (SlotRequest) returns (stream SlotUpdate);
+  rpc SubscribeTransactions (TransactionRequest) returns (stream TransactionUpdate);
+}

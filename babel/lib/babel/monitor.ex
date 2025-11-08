@@ -2,6 +2,7 @@ defmodule Babel.Monitor do
   use GenServer
   require Logger
   alias Babel.RPC.Client
+  alias Babel.GRPC.Streamer
 
   @check_interval 10_000  # 10 seconds
 
@@ -63,6 +64,8 @@ defmodule Babel.Monitor do
       end
 
       check_duration = System.monotonic_time(:millisecond) - start_time
+
+      Streamer.slot_update(slot, metrics)
 
       # Emit telemetry
       :telemetry.execute(
