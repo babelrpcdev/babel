@@ -60,6 +60,11 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - GRPC_PORT=${GRPC_PORT:-50051}
       - GRPC_TX_POLL_MS=${GRPC_TX_POLL_MS:-750}
+      - GRPC_API_KEYS=${GRPC_API_KEYS:-your_grpc_api_key_here}
+      - GRPC_RATE_LIMIT_PER_MIN=${GRPC_RATE_LIMIT_PER_MIN:-1200}
+      - GRPC_MAX_STREAMS=${GRPC_MAX_STREAMS:-200}
+      - GRPC_MAX_STREAMS_PER_KEY=${GRPC_MAX_STREAMS_PER_KEY:-50}
+      - GRPC_MAX_PENDING_MESSAGES=${GRPC_MAX_PENDING_MESSAGES:-500}
     networks:
       - babel-net
     depends_on:

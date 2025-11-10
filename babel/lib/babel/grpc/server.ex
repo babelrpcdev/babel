@@ -43,25 +43,24 @@ defmodule Babel.GRPC.Server do
 
   require Logger
 
-  alias Babel.GRPC.Streamer
+  alias Babel.GRPC.{Auth, Streamer}
   alias Babel.GRPC.Stream.{SlotUpdate, TransactionUpdate}
 
   @impl true
   def subscribe_slots(%Babel.GRPC.Stream.SlotRequest{starting_slot: starting_slot}, stream) do
-    case Streamer.register_slot(self(), starting_slot) do
-      {:ok, ref} ->
-        Logger.debug("[GRPC] Slot subscription registered (min_slot=#{starting_slot})")
-        monitor = Process.monitor(stream.pid)
+    with {:ok, ctx} <- Auth.authorize(stream.metadata),
+         {:ok, ref} <- Streamer.register_slot(self(), starting_slot, ctx) do
+      Logger.debug("[GRPC] Slot subscription registered (min_slot=#{starting_slot}, key=#{ctx.key})")
+      monitor = Process.monitor(stream.pid)
 
-        try do
-          slot_loop(stream, ref, monitor)
-        after
-          Streamer.unregister(ref)
-        end
-
+      try do
+        slot_loop(stream, ref, monitor)
+      after
+        Streamer.unregister(ref)
+      end
+    else
       {:error, reason} ->
-        Logger.warn("[GRPC] Slot subscription failed: #{inspect(reason)}")
-        :ok
+        raise_rpc_error(reason)
     end
   end
 
@@ -73,20 +72,19 @@ defmodule Babel.GRPC.Server do
       limit: sanitize_limit(request.limit)
     }
 
-    case Streamer.register_transactions(self(), opts) do
-      {:ok, ref} ->
-        Logger.debug("[GRPC] Transaction subscription registered (address=#{opts.address})")
-        monitor = Process.monitor(stream.pid)
+    with {:ok, ctx} <- Auth.authorize(stream.metadata),
+         {:ok, ref} <- Streamer.register_transactions(self(), opts, ctx) do
+      Logger.debug("[GRPC] Transaction subscription registered (address=#{opts.address}, key=#{ctx.key})")
+      monitor = Process.monitor(stream.pid)
 
-        try do
-          tx_loop(stream, ref, monitor)
-        after
-          Streamer.unregister(ref)
-        end
-
+      try do
+        tx_loop(stream, ref, monitor)
+      after
+        Streamer.unregister(ref)
+      end
+    else
       {:error, reason} ->
-        Logger.warn("[GRPC] Transaction subscription failed: #{inspect(reason)}")
-        :ok
+        raise_rpc_error(reason)
     end
   end
 
@@ -100,6 +98,9 @@ defmodule Babel.GRPC.Server do
         |> send_reply(stream)
 
         slot_loop(stream, ref, monitor)
+
+      {:overload, ^ref, scope} ->
+        raise_rpc_error({:backpressure, scope})
 
       {:DOWN, ^monitor, :process, _pid, _reason} ->
         :ok
@@ -130,6 +131,9 @@ defmodule Babel.GRPC.Server do
 
         tx_loop(stream, ref, monitor)
 
+      {:overload, ^ref, scope} ->
+        raise_rpc_error({:backpressure, scope})
+
       {:DOWN, ^monitor, :process, _pid, _reason} ->
         :ok
 
@@ -139,6 +143,38 @@ defmodule Babel.GRPC.Server do
       30_000 ->
         tx_loop(stream, ref, monitor)
     end
+  end
+
+  defp raise_rpc_error(:unauthenticated) do
+    raise GRPC.RPCError, status: :unauthenticated, message: "Missing or invalid gRPC API key"
+  end
+
+  defp raise_rpc_error(:unauthorized) do
+    raise GRPC.RPCError, status: :permission_denied, message: "API key not permitted for gRPC access"
+  end
+
+  defp raise_rpc_error(:rate_limited) do
+    raise GRPC.RPCError, status: :resource_exhausted, message: "gRPC rate limit exceeded, try again later"
+  end
+
+  defp raise_rpc_error(:over_capacity) do
+    raise GRPC.RPCError, status: :resource_exhausted, message: "gRPC capacity exhausted, please retry soon"
+  end
+
+  defp raise_rpc_error({:key_capacity, _key}) do
+    raise GRPC.RPCError, status: :resource_exhausted, message: "Too many concurrent streams for this API key"
+  end
+
+  defp raise_rpc_error({:backpressure, :slots}) do
+    raise GRPC.RPCError, status: :resource_exhausted, message: "Slot stream closed due to client backpressure"
+  end
+
+  defp raise_rpc_error({:backpressure, :transactions}) do
+    raise GRPC.RPCError, status: :resource_exhausted, message: "Transaction stream closed due to client backpressure"
+  end
+
+  defp raise_rpc_error(reason) do
+    raise GRPC.RPCError, status: :internal, message: "Unexpected gRPC error: #{inspect(reason)}"
   end
 
   defp transaction_update_from_payload(payload) do

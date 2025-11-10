@@ -7,6 +7,7 @@ Production-grade private RPC infrastructure for Solana mainnet, optimized for pu
 - **Solana RPC Node**: Optimized mainnet validator with private RPC access
 - **Babel Manager**: Elixir/OTP application for monitoring and management
 - **gRPC Stream Service**: Low-latency slot and transaction feeds inspired by Yellowstone gRPC
+- **Access Control**: API-key secured gRPC layer with per-key quotas and backpressure handling
 - **Metrics Stack**: Prometheus + Grafana for real-time monitoring
 - **Logging Stack**: Loki + Promtail for centralized log aggregation
 
@@ -71,6 +72,7 @@ Example slot subscription using [`grpcurl`](https://github.com/fullstorydev/grpc
 
 ```bash
 grpcurl -plaintext \
+  -H "authorization: Bearer ${GRPC_TOKEN}" \
   -d '{"startingSlot": 0}' \
   localhost:50051 babel.stream.BabelStream/SubscribeSlots
 ```
@@ -79,11 +81,21 @@ Watch pump.fun program signatures with throttled polling (defaults shown in `.en
 
 ```bash
 grpcurl -plaintext \
+  -H "authorization: Bearer ${GRPC_TOKEN}" \
   -d '{"address":"6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P","limit":20}' \
   localhost:50051 babel.stream.BabelStream/SubscribeTransactions
 ```
 
 > After pulling the repository, run `mix deps.get` inside `babel/` to install the new gRPC dependencies.
+
+### gRPC Authentication & Rate Control
+
+- Define one or more keys in `GRPC_API_KEYS` (comma-separated). Requests must send `authorization: Bearer <key>` or `x-api-key: <key>`.
+- The auth service enforces `GRPC_RATE_LIMIT_PER_MIN` (per API key) using an in-memory token bucket.
+- Global concurrency caps are configured via:
+  - `GRPC_MAX_STREAMS` – total concurrent gRPC streams
+  - `GRPC_MAX_STREAMS_PER_KEY` – per-key concurrent stream quota
+- Backpressure protection closes streams if a client’s gRPC mailbox exceeds `GRPC_MAX_PENDING_MESSAGES`, returning `resource_exhausted`.
 
 ## Performance Tuning
 

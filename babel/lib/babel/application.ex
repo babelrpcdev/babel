@@ -18,6 +18,9 @@ defmodule Babel.Application do
       # WebSocket subscriber for real-time events
       {Babel.RPC.Subscriber, []},
       
+      # gRPC auth & rate control
+      {Babel.GRPC.Auth, []},
+
       # gRPC Streamer bridge
       Babel.GRPC.Streamer,
 
