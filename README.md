@@ -6,7 +6,7 @@ Production-grade private RPC infrastructure for Solana mainnet, optimized for pu
 
 - **Solana RPC Node**: Optimized mainnet validator with private RPC access
 - **Babel Manager**: Elixir/OTP application for monitoring and management
-- **gRPC Stream Service**: Low-latency slot and transaction feeds inspired by Yellowstone gRPC
+- **gRPC Stream Service**: Low-latency slot, transaction, account, and program feeds inspired by Yellowstone gRPC
 - **Access Control**: API-key secured gRPC layer with per-key quotas and backpressure handling
 - **Metrics Stack**: Prometheus + Grafana for real-time monitoring
 - **Logging Stack**: Loki + Promtail for centralized log aggregation
@@ -67,6 +67,9 @@ The Babel Stream service follows a lightweight proto contract (`babel/proto/babe
 
 - `SubscribeSlots` – continuous slot, TPS, and block-time updates
 - `SubscribeTransactions` – recent signatures for any address or program (ideal for pump.fun tracking)
+- `SubscribeAccounts` – live account snapshots with smart polling and historical warm-up
+- `SubscribePrograms` – rich program-account changes (created/updated/deleted) with optional memcmp/data-size filters
+- Historical buffers (`GRPC_SLOT_HISTORY_SIZE`, `GRPC_TX_HISTORY_SIZE`) ensure new clients replay the freshest data immediately.
 
 Example slot subscription using [`grpcurl`](https://github.com/fullstorydev/grpcurl):
 
@@ -86,6 +89,29 @@ grpcurl -plaintext \
   localhost:50051 babel.stream.BabelStream/SubscribeTransactions
 ```
 
+Warm account snapshot followed by live updates:
+
+```bash
+grpcurl -plaintext \
+  -H "x-api-key: ${GRPC_TOKEN}" \
+  -d '{"address":"11111111111111111111111111111111","commitment":"confirmed"}' \
+  localhost:50051 babel.stream.BabelStream/SubscribeAccounts
+```
+
+Program delta stream with memcmp filter (bytes in base58):
+
+```bash
+grpcurl -plaintext \
+  -H "authorization: Bearer ${GRPC_TOKEN}" \
+  -d '{
+        "programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "filters":[{"memcmpOffset":0,"memcmpBytes":"6EF8rre..."},{"dataSize":165}]
+      }' \
+  localhost:50051 babel.stream.BabelStream/SubscribePrograms
+```
+
+> `memcmpBytes` must be supplied as base58, matching Solana JSON-RPC semantics.
+
 > After pulling the repository, run `mix deps.get` inside `babel/` to install the new gRPC dependencies.
 
 ### gRPC Authentication & Rate Control
@@ -96,6 +122,8 @@ grpcurl -plaintext \
   - `GRPC_MAX_STREAMS` – total concurrent gRPC streams
   - `GRPC_MAX_STREAMS_PER_KEY` – per-key concurrent stream quota
 - Backpressure protection closes streams if a client’s gRPC mailbox exceeds `GRPC_MAX_PENDING_MESSAGES`, returning `resource_exhausted`.
+- Initial connections replay the latest history buffers (`GRPC_SLOT_HISTORY_SIZE`, `GRPC_TX_HISTORY_SIZE`) so bots can warm up instantly.
+- Polling cadences for account/program snapshots are tunable via `GRPC_ACCOUNT_POLL_MS` and `GRPC_PROGRAM_POLL_MS`.
 
 ## Performance Tuning
 

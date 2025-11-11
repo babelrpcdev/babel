@@ -11,6 +11,7 @@ message SlotUpdate {
   double tps = 2;
   double block_time = 3;
   uint64 timestamp = 4;
+  bool snapshot = 5;
 }
 
 message TransactionRequest {
@@ -25,9 +26,72 @@ message TransactionUpdate {
   uint64 slot = 3;
   string error = 4;
   uint64 block_time = 5;
+  bool snapshot = 6;
+}
+
+enum AccountUpdateStatus {
+  ACCOUNT_STATUS_UNKNOWN = 0;
+  ACCOUNT_STATUS_EXISTS = 1;
+  ACCOUNT_STATUS_NOT_FOUND = 2;
+}
+
+message AccountRequest {
+  string address = 1;
+  string commitment = 2;
+}
+
+message AccountUpdate {
+  string address = 1;
+  uint64 slot = 2;
+  uint64 lamports = 3;
+  string owner = 4;
+  bytes data = 5;
+  string encoding = 6;
+  bool executable = 7;
+  uint64 rent_epoch = 8;
+  bool snapshot = 9;
+  AccountUpdateStatus status = 10;
+}
+
+message ProgramFilter {
+  uint32 memcmp_offset = 1;
+  string memcmp_bytes = 2;
+  uint64 data_size = 3;
+}
+
+message ProgramRequest {
+  string program_id = 1;
+  string commitment = 2;
+  repeated ProgramFilter filters = 3;
+}
+
+enum ProgramUpdateStatus {
+  PROGRAM_STATUS_UNKNOWN = 0;
+  PROGRAM_STATUS_UPDATED = 1;
+  PROGRAM_STATUS_DELETED = 2;
+}
+
+message ProgramAccount {
+  string address = 1;
+  uint64 lamports = 2;
+  string owner = 3;
+  bytes data = 4;
+  string encoding = 5;
+  bool executable = 6;
+  uint64 rent_epoch = 7;
+}
+
+message ProgramUpdate {
+  string program_id = 1;
+  ProgramUpdateStatus status = 2;
+  ProgramAccount account = 3;
+  uint64 slot = 4;
+  bool snapshot = 5;
 }
 
 service BabelStream {
   rpc SubscribeSlots (SlotRequest) returns (stream SlotUpdate);
   rpc SubscribeTransactions (TransactionRequest) returns (stream TransactionUpdate);
+  rpc SubscribeAccounts (AccountRequest) returns (stream AccountUpdate);
+  rpc SubscribePrograms (ProgramRequest) returns (stream ProgramUpdate);
 }
